@@ -1,30 +1,32 @@
 package com.tetris.board;
 
+import com.tetris.gridRefactor.GridRefactor;
 import com.tetris.model.RotationValidator;
 import com.tetris.model.TetrisType;
 import com.tetris.model.Tetromino;
 import com.tetris.model.TetrominoFactory;
 
 public class TetrisBoard {
-    private static final int ROWS = 20;
+    private static final int ROWS = 5;
     private static final int COLS = 10;
     private Tetromino currentTetromino;
     private TetrisType[][] board;
-
+    private boolean gameOver = false;
     RotationValidator rotationStrategy = new RotationValidator();
 
     public TetrisBoard(){
-        this.board = new TetrisType[20][10];
+        this.board = new TetrisType[ROWS][COLS];
         this.currentTetromino = TetrominoFactory.createRandomTetromino();
     }
     private void spawnpiece(){
-        this.currentTetromino = TetrominoFactory.createRandomTetromino();
+        currentTetromino = TetrominoFactory.createRandomTetromino();
     }
 
     public void moveLeft(){
-        Boolean isPossible = true;
-        TetrisType t = currentTetromino.getType();
-        int[][] coordinates = t.getShape();
+        boolean isPossible = true;
+
+        int[][] coordinates = rotationStrategy.currentStateCoordinate(currentTetromino);
+
         int col = currentTetromino.getCol();
         int row = currentTetromino.getRow();
         for(int[] cols: coordinates){
@@ -45,10 +47,9 @@ public class TetrisBoard {
         }
     }
 
-    public void moreRight(){
-        Boolean isPossible = true;
-        TetrisType t = currentTetromino.getType();
-        int[][] coordinates = t.getShape();
+    public void moveRight(){
+        boolean isPossible = true;
+        int[][] coordinates = rotationStrategy.currentStateCoordinate(currentTetromino);
         int col = currentTetromino.getCol();
         int row = currentTetromino.getRow();
         for(int[] cols: coordinates){
@@ -70,9 +71,8 @@ public class TetrisBoard {
         }
     }
     public void movedown(){
-        Boolean isPossible = true;
-        TetrisType t = currentTetromino.getType();
-        int[][] coordinates = t.getShape();
+        boolean isPossible = true;
+        int[][] coordinates = rotationStrategy.currentStateCoordinate(currentTetromino);
         int col = currentTetromino.getCol();
         int row = currentTetromino.getRow();
         for(int[] cols: coordinates){
@@ -88,24 +88,105 @@ public class TetrisBoard {
         if(isPossible){
             currentTetromino.setRow(row+1);
         }
+        else{
+            lockPiece();
+        }
     }
 
     public void rotatePiece(){
 
-        rotationStrategy.isValidRoation(currentTetromino, board);
+       boolean ispossible = rotationStrategy.isValidRotation(currentTetromino, board);
+       if(ispossible){
+           int nextRotation = (currentTetromino.getRotation()+1)%4;
+           currentTetromino.setRotation(nextRotation);
+           int[][] coords =
+                   rotationStrategy.currentStateCoordinate(currentTetromino);
+
+//           for(int[] p : coords){
+//               System.out.println(p[0] + "," + p[1]);
+//           }
+       }
+
     }
     private void lockPiece(){
+        int[][] coordinates = rotationStrategy.currentStateCoordinate(currentTetromino);
+        int col = currentTetromino.getCol();
+        int row = currentTetromino.getRow();
+        for(int[] cols: coordinates){
+            int temprow = cols[0]+row;
+            int tempcol = cols[1]+col;
+            board[temprow][tempcol] = currentTetromino.getType();
+        }
+        clearLines();
+        spawnpiece();
 
+        if(checkSpawnCollision()){
+            gameOver = true;
+            endGame();
+        }
+    }
+    public void endGame(){
+        gameOver = true;
+        System.out.println("Game Over");
     }
     private void clearLines(){
+        int n= board.length;
+        int m= board[0].length;
+        for(int i=n-1;i>=0;i--){
+            boolean lineFlag=false;
+            for(int j=0;j<m;j++){
+                if(board[i][j] == null){
+                    lineFlag = true;
+                }
+                if(j==m-1 && !lineFlag){
+                    GridRefactor.refactorGrid(board, i);
+                    i=i+1;
+                }
+            }
 
+        }
     }
-    private boolean isGameOver(){
+    public boolean isGameOver() {
+        return gameOver;
+    }
+    private boolean checkSpawnCollision() {
+        int[][] coordinates =
+                rotationStrategy.currentStateCoordinate(currentTetromino);
+
+        int col = currentTetromino.getCol();
+        int row = currentTetromino.getRow();
+
+        for(int[] cols : coordinates){
+            int temprow = cols[0] + row;
+            int tempcol = cols[1] + col;
+
+            if(board[temprow][tempcol] != null){
+                return true;
+            }
+        }
+
         return false;
     }
-    public TetrisType[][] getGrid(){
-
-        return this.board;
+    public TetrisType[][] getRenderableGrid(){
+        TetrisType[][] renderedboard = new TetrisType[ROWS][COLS];
+        for(int i=0;i<ROWS;i++){
+            for(int j=0;j<COLS;j++){
+                renderedboard[i][j]= board[i][j];
+            }
+        }
+        int[][] coordinates = rotationStrategy.currentStateCoordinate(currentTetromino);
+        int col = currentTetromino.getCol();
+        int row = currentTetromino.getRow();
+        TetrisType t = currentTetromino.getType();
+        for(int[] cols: coordinates){
+            int temprow = cols[0]+row;
+            int tempcol = cols[1]+col;
+            if(temprow >= 0 && temprow < ROWS &&
+                    tempcol >= 0 && tempcol < COLS){
+                renderedboard[temprow][tempcol] = t;
+            }
+        }
+        return renderedboard;
     }
 
 }

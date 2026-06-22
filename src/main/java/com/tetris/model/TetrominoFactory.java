@@ -13,9 +13,10 @@ public class TetrominoFactory {
 
         Tetromino tetromino = new Tetromino();
         tetromino.type = randomType;
+//        tetromino.type = TetrisType.Z;
         tetromino.row = 0;
-        tetromino.col = 4;      // roughly center
-        tetromino.rotation = 0; // initial rotation
+        tetromino.col = 4;
+        tetromino.rotation = 0;
 
         return tetromino;
     }
